@@ -508,7 +508,7 @@
             });
 
             // on first page load get initial images
-            if( _configuration.bind == "load" ) $(window).load(_init);
+            if( _configuration.bind == "load" ) $(_init);
 
             // if event driven don't wait for page loading
             else if( _configuration.bind == "event" ) _init();
