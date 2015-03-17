@@ -461,30 +461,46 @@
             next[0].call(next[1] || window);
         }
 
+        function _disable() {
+            if (_scrollListener) {
+                $(_configuration.appendScroll).unbind("scroll", _scrollListener);
+            }
+
+            if (_resizeListener) {
+                $(_configuration.appendScroll).unbind("resize", _resizeListener);
+            }
+        }
+
         // set up lazy
-        (function()
-        {
-            // overwrite configuration with custom user settings
-            if( settings ) $.extend(_configuration, settings);
+        (function() {
+            if ($.type(settings) === "string") {
+                var command = settings;
 
-            // late-bind error callback to images if set
-            if( _configuration.onError ) _items.each(function()
-            {
-                var item = this;
-                _addToQueue(function()
-                {
-                    $(item).bind("error", function()
-                    {
-                        _triggerCallback(_configuration.onError, $(this));
-                    });
-                }, item);
-            });
+                if (command === "disable") {
+                    return _disable();
+                } else if (command === "fetchVisible") {
+                    return _lazyLoadImages(false);
+                }
+            } else {
+                // overwrite configuration with custom user settings
+                if (settings) $.extend(_configuration, settings);
 
-            // on first page load get initial images
-            if( _configuration.bind == "load" ) $(_init);
+                // late-bind error callback to images if set
+                if (_configuration.onError) _items.each(function() {
+                    var item = this;
+                    _addToQueue(function() {
+                        $(item).bind("error", function() {
+                            _triggerCallback(_configuration.onError, $(this));
+                        });
+                    }, item);
+                });
 
-            // if event driven don't wait for page loading
-            else if( _configuration.bind == "event" ) _init();
+                // on first page load get initial images
+                if (_configuration.bind == "load") $(_init);
+
+                // if event driven don't wait for page loading
+                else if (_configuration.bind == "event") _init();
+            }
         })();
 
         return this;
