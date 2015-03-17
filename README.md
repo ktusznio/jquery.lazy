@@ -1,3 +1,18 @@
+This is a fork, to address a few issues:
+
+Add commands to disable the plugin and force an immediate scan.
+
+* `$("...").lazy("disable")` disables scroll and resize listeners on the element(s).
+* `$("...").lazy("fetchVisible")` does an immediate viewport check and fetches images.
+
+Fix viewport checking.
+
+* Use jquery’s height and width functions to get the window’s dimensions.
+* Check that the element is in the DOM.
+* Consider scrollTop and scrollLeft in viewport check.
+
+Use jQuery.ready rather than jQuery.load.
+
 ### jQuery Lazy - Delayed Image and Background Loader
 [![GitHub version](https://badge.fury.io/gh/eisbehr-%2Fjquery.lazy.svg)](http://github.com/eisbehr-/jquery.lazy)
 [![Dependency version](https://david-dm.org/eisbehr-/jquery.lazy.png)](https://david-dm.org/eisbehr-/jquery.lazy)
