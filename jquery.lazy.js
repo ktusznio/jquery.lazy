@@ -16,6 +16,8 @@
     var _scrollListener,
         _resizeListener;
 
+    var $window = $(window);
+
     $.fn.lazy = function(settings) {
         "use strict";
 
@@ -301,62 +303,60 @@
          * @param {object} element
          * @return {boolean}
          */
-        function _isInLoadableArea(element)
-        {
-            var viewedWidth  = _getActualWidth(),
-                viewedHeight = _getActualHeight(),
-                elementBound = element.getBoundingClientRect(),
-                vertical     = // check if element is in loadable area from top
-                               ((viewedHeight + _configuration.threshold) > elementBound.top) &&
-                               // check if element is even in loadable are from bottom
-                               (-_configuration.threshold < elementBound.bottom),
-                horizontal   = // check if element is in loadable area from left
-                               ((viewedWidth + _configuration.threshold) > elementBound.left) &&
-                               // check if element is even in loadable are from right
-                               (-_configuration.threshold < elementBound.right);
+        function _isInLoadableArea(element) {
+            var inDOM = $.contains(document, element);
 
-            if( _configuration.scrollDirection == "vertical" ) return vertical;
-            else if( _configuration.scrollDirection == "horizontal" ) return horizontal;
+            if (inDOM) {
+                var $element = $(element);
+                var scrollTop = $window.scrollTop();
+                var scrollLeft = $window.scrollLeft();
+                var windowWidth = $window.width();
+                var windowHeight = $window.height();
+                var offset = $(element).offset();
+                var elTop = offset.top;
+                var elLeft = offset.left;
+                var elHeight = $element.height();
+                var elWidth = $element.width();
+                var buffer = _configuration.threshold;
 
-            return vertical && horizontal;
+                var inVerticalViewport =
+                    // Not above viewport.
+                    (elTop + elHeight > scrollTop - buffer) &&
+                    // Not below viewport.
+                    (elTop < scrollTop + windowHeight + buffer);
+
+                var inHorizontalViewport =
+                    // Not to the left of viewport.
+                    ((elLeft + elWidth) > scrollLeft - buffer) &&
+                    // Not to the right of viewport.
+                    elLeft < (scrollLeft + windowWidth) + buffer;
+
+                if (_configuration.scrollDirection === "vertical") {
+                    return inVerticalViewport;
+                } else if (_configuration.scrollDirection === "horizontal") {
+                    return inHorizontalViewport;
+                }
+
+                return inVerticalViewport && inHorizontalViewport;
+            } else {
+                return false;
+            }
         }
 
         /**
-         * try to allocate current viewed width of the browser
-         * uses fallback option when no height is found
          * @access private
          * @return {number}
          */
-        function _getActualWidth()
-        {
-            if( _actualWidth >= 0 ) return _actualWidth;
-
-            _actualWidth = window.innerWidth ||
-                           document.documentElement.clientWidth ||
-                           document.body.clientWidth ||
-                           document.body.offsetWidth ||
-                           _configuration.fallbackWidth;
-
-            return _actualWidth;
+        function _getActualWidth() {
+            return $window.width();
         }
 
         /**
-         * try to allocate current viewed height of the browser
-         * uses fallback option when no height is found
          * @access private
          * @return {number}
          */
-        function _getActualHeight()
-        {
-            if( _actualHeight >= 0 ) return _actualHeight;
-
-            _actualHeight = window.innerHeight ||
-                            document.documentElement.clientHeight ||
-                            document.body.clientHeight ||
-                            document.body.offsetHeight ||
-                            _configuration.fallbackHeight;
-
-            return _actualHeight;
+        function _getActualHeight() {
+            return $window.height();
         }
 
         /**
