@@ -12,10 +12,11 @@
  * jQuery("img.lazy").lazy();
  */
 
-(function($, window, document, undefined)
-{
-    $.fn.lazy = function(settings)
-    {
+(function($, window, document, undefined) {
+    var _scrollListener,
+        _resizeListener;
+
+    $.fn.lazy = function(settings) {
         "use strict";
 
         /**
@@ -23,8 +24,7 @@
          * @access private
          * @type {*}
          */
-        var _configuration =
-        {
+        var _configuration = {
             // general
             bind            : "load",
             threshold       : 500,
@@ -126,53 +126,50 @@
          * @access private
          * @return void
          */
-        function _init()
-        {
+        function _init() {
             // detect actual device pixel ratio
             // noinspection JSUnresolvedVariable
             _isRetinaDisplay = window.devicePixelRatio > 1;
 
             // set default image and placeholder to all images if nothing other is set
-            if( _configuration.defaultImage !== null || _configuration.placeholder !== null )
-                for( var i = 0; i < _items.length; i++ )
-                {
+            if (_configuration.defaultImage !== null || _configuration.placeholder !== null)
+                for(var i = 0; i < _items.length; i++) {
                     var element = $(_items[i]);
 
                     // default image
-                    if( _configuration.defaultImage !== null && !element.attr("src") )
+                    if (_configuration.defaultImage !== null && !element.attr("src"))
                         element.attr("src", _configuration.defaultImage);
 
                     // placeholder
-                    if( _configuration.placeholder !== null && (!element.css("background-image") || element.css("background-image") == "none") )
+                    if (_configuration.placeholder !== null && (!element.css("background-image") || element.css("background-image") == "none"))
                         element.css("background-image", "url(" + _configuration.placeholder + ")");
                 }
 
             // if delay time is set load all images at once after delay time
-            if( _configuration.delay >= 0 ) setTimeout(function() { _lazyLoadImages(true); }, _configuration.delay);
+            if (_configuration.delay >= 0) setTimeout(function() { _lazyLoadImages(true); }, _configuration.delay);
 
             // if no delay is set or combine usage is active bind events
-            if( _configuration.delay < 0 || _configuration.combined )
-            {
+            if (_configuration.delay < 0 || _configuration.combined) {
                 // load initial images
                 _lazyLoadImages(false);
 
                 // bind lazy load functions to scroll event
-                _addToQueue(function()
-                {
-                    $(_configuration.appendScroll).bind("scroll", _throttle(_configuration.throttle, function()
-                    {
+                _addToQueue(function() {
+                    _scrollListener = _throttle(_configuration.throttle, function() {
                         _addToQueue(function() { _lazyLoadImages(false) }, this, true);
-                    }));
+                    });
+
+                    $(_configuration.appendScroll).bind("scroll", _scrollListener);
                 }, this);
 
                 // bind lazy load functions to resize event
-                _addToQueue(function()
-                {
-                    $(_configuration.appendScroll).bind("resize", _throttle(_configuration.throttle, function()
-                    {
+                _addToQueue(function() {
+                    _resizeListener = _throttle(_configuration.throttle, function() {
                         _actualWidth = _actualHeight = -1;
                         _addToQueue(function() { _lazyLoadImages(false) }, this, true);
-                    }));
+                    });
+
+                    $(_configuration.appendScroll).bind("resize", _resizeListener);
                 }, this);
             }
         }
@@ -183,22 +180,18 @@
          * @param {boolean} allImages
          * @return void
          */
-        function _lazyLoadImages(allImages)
-        {
+        function _lazyLoadImages(allImages) {
             // stop if no items where left
-            if( !_items.length ) return;
+            if (!_items.length) return;
 
             // helper to see if something was changed
             var loadedImages = false;
 
-            for( var i = 0; i < _items.length; i++ )
-            {
-                (function()
-                {
+            for (var i = 0; i < _items.length; i++) {
+                (function() {
                     var item = _items[i], element = $(item);
 
-                    if( _isInLoadableArea(item) || allImages )
-                    {
+                    if (_isInLoadableArea(item) || allImages) {
                         var tag = item.tagName.toLowerCase();
 
                         if( // image source attribute is available
@@ -210,8 +203,7 @@
                             // and is not actually loaded just before
                             !element.data(_configuration.handledName) &&
                             // and is visible or visibility doesn't matter
-                            (element.is(":visible") || !_configuration.visibleOnly) )
-                        {
+                            (element.is(":visible") || !_configuration.visibleOnly) ) {
                             loadedImages = true;
 
                             // mark element always as handled as this point to prevent double loading
@@ -225,10 +217,8 @@
             }
 
             // when something was loaded remove them from remaining items
-            if( loadedImages ) _addToQueue(function()
-            {
-                _items = $(_items).filter(function()
-                {
+            if (loadedImages) _addToQueue(function() {
+                _items = $(_items).filter(function() {
                     return !$(this).data(_configuration.handledName);
                 });
             }, this);
@@ -241,8 +231,7 @@
          * @param {string} tag
          * @return void
          */
-        function _handleItem(element, tag)
-        {
+        function _handleItem(element, tag) {
             // create image object
             var imageObj = $(new Image());
 
@@ -250,17 +239,14 @@
             ++_awaitingAfterLoad;
 
             // bind error event if wanted, otherwise only reduce waiting count
-            if( _configuration.onError ) imageObj.error(function() { _triggerCallback(_configuration.onError, element); _reduceAwaiting(); });
+            if (_configuration.onError) imageObj.error(function() { _triggerCallback(_configuration.onError, element); _reduceAwaiting(); });
             else imageObj.error(function() { _reduceAwaiting(); });
 
             // bind after load callback to image
             var onLoad = false;
-            imageObj.one("load", function()
-            {
-                var callable = function()
-                {
-                    if( !onLoad )
-                    {
+            imageObj.one("load", function() {
+                var callable = function() {
+                    if (!onLoad) {
                         window.setTimeout(callable, 100);
                         return;
                     }
@@ -269,15 +255,14 @@
                     element.hide();
 
                     // set image back to element
-                    if( tag == "img" ) element.attr("src", imageObj.attr("src"));
+                    if (tag == "img") element.attr("src", imageObj.attr("src"));
                     else element.css("background-image", "url(" + imageObj.attr("src") + ")");
 
                     // bring it back with some effect!
                     element[_configuration.effect](_configuration.effectTime);
 
                     // remove attribute from element
-                    if( _configuration.removeAttribute )
-                    {
+                    if (_configuration.removeAttribute) {
                         element.removeAttr(_configuration.attribute);
                         element.removeAttr(_configuration.retinaAttribute);
                     }
@@ -307,7 +292,7 @@
             onLoad = true;
 
             // call after load even on cached image
-            if( imageObj.complete ) imageObj.load();
+            if (imageObj.complete) imageObj.load();
         }
 
         /**
@@ -381,23 +366,20 @@
          * @param {function} call
          * @return {function}
          */
-        function _throttle(delay, call)
-        {
+        function _throttle(delay, call) {
             var _timeout, _exec = 0;
 
-            function callable()
-            {
+            function callable() {
                 var elapsed = +new Date() - _exec;
 
-                function run()
-                {
+                function run() {
                     _exec = +new Date();
                     call.apply(undefined);
                 }
 
                 _timeout && clearTimeout(_timeout);
 
-                if( elapsed > delay || !_configuration.enableThrottle ) run();
+                if (elapsed > delay || !_configuration.enableThrottle) run();
                 else _timeout = setTimeout(run, delay - elapsed);
             }
 
@@ -409,12 +391,11 @@
          * @access private
          * @return void
          */
-        function _reduceAwaiting()
-        {
+        function _reduceAwaiting() {
             --_awaitingAfterLoad;
 
             // if no items were left trigger finished event 
-            if( !_items.size() && !_awaitingAfterLoad ) _triggerCallback(_configuration.onFinishedAll, null);
+            if (!_items.size() && !_awaitingAfterLoad) _triggerCallback(_configuration.onFinishedAll, null);
         }
 
         /**
@@ -424,11 +405,9 @@
          * @param {object} [element]
          * @return void
          */
-        function _triggerCallback(callback, element)
-        {
-            if( callback )
-            {
-                if( element )
+        function _triggerCallback(callback, element) {
+            if (callback) {
+                if (element)
                     _addToQueue(function() { callback(element); }, this);
                 else
                     _addToQueue(callback, this);
@@ -440,12 +419,10 @@
          * @access private
          * @return void
          */
-        function _setQueueTimer()
-        {
-            _queueTimer = setTimeout(function()
-            {
+        function _setQueueTimer() {
+            _queueTimer = setTimeout(function() {
                 _addToQueue();
-                if( _queueItems.length ) _setQueueTimer();
+                if (_queueItems.length) _setQueueTimer();
             }, 2);
         }
 
@@ -457,33 +434,29 @@
          * @param {boolean} [isLazyMagic]
          * @returns void
          */
-        function _addToQueue(callable, context, isLazyMagic)
-        {
-            if( callable )
-            {
+        function _addToQueue(callable, context, isLazyMagic) {
+            if (callable) {
                 // execute directly when queue is disabled and stop queuing
-                if( !_configuration.enableQueueing )
-                {
+                if (!_configuration.enableQueueing) {
                     callable.call(context || window);
                     return;
                 }
 
                 // let the lazy magic only be once in queue
-                if( !isLazyMagic || (isLazyMagic && !_queueContainsMagic) )
-                {
+                if (!isLazyMagic || (isLazyMagic && !_queueContainsMagic)) {
                     _queueItems.push([callable, context, isLazyMagic]);
-                    if( isLazyMagic ) _queueContainsMagic = true;
+                    if (isLazyMagic) _queueContainsMagic = true;
                 }
 
-                if( _queueItems.length == 1 ) _setQueueTimer();
+                if (_queueItems.length == 1) _setQueueTimer();
 
                 return;
             }
 
             var next = _queueItems.shift();
 
-            if( !next ) return;
-            if( next[2] ) _queueContainsMagic = false;
+            if (!next) return;
+            if (next[2]) _queueContainsMagic = false;
 
             next[0].call(next[1] || window);
         }
